@@ -1,5 +1,5 @@
 # pydebug below
-# import pdb
+#import pdb
 import os, os.path, sys
 import math
 import csv
@@ -17,15 +17,15 @@ import resources_rc
 
 
 # pydebug
-# pdb.set_trace()
+#pdb.set_trace()
 
 # SETUP GUI
 class MapExplorer(QMainWindow, Ui_ExplorerWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
-        #self.connect(self.actionQuit,
-                     #SIGNAL("triggered()"), qApp.quit)
+        self.connect(self.actionQuit,
+                     SIGNAL("triggered()"), qApp.quit)
         self.connect(self.actionShowThiefLayer,
                      SIGNAL("triggered()"), self.showThiefLayer)
 
@@ -134,19 +134,50 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.thieflayer.setCustomProperty("labeling/bufferTransp", "30")
         self.thieflayer.setCustomProperty("labeling/fontSize", "8")
         self.thieflayer.setCustomProperty("labeling/fieldName",
-                                          "'Az: '  || Y || '\n' || 'X: ' ||  ID ||  '\n'  || 'Y: '  ||   AZIMUTH")
+                                          "'Az: '  || AZIMUTH || '\n' || 'X: ' ||  X ||  '\n'  || 'Y: '  ||   Y")
         self.thieflayer.setCustomProperty("labeling/placement", "3")
         self.thieflayer.setCustomProperty("labeling/dist", "5")
-        self.forcedScale(None)
+        #try:
+            #self.zoomToScale(None)
+        #except Exception as r:
+            #print r
 
     try:
-        def forcedScale(self, scales):
-            def zoomToScale(self, scale):
+        def zoomToScale(self, scale):
 
-                self.mapCanvas.scaleChanged.disconnect(self.zoomToScale)
-                targetScale = min(scales, key=lambda x: abs(x - scale))
-                self.mapCanvas.zoomScale(targetScale)
-                self.mapCanvas.scaleChanged.connect(self.zoomToScale)
+            scales = [
+                591657528,
+                295828764,
+                147914382,
+                73957191,
+                36978595,
+                18489298,
+                9244649,
+                4622324,
+                2311162,
+                1155581,
+                577791,
+                288895,
+                144448,
+                72224,
+                36112,
+                18056,
+                9028,
+                4514,
+                2257,
+                1128,
+                564,
+                282,
+                141,
+                71
+            ]
+
+            self.mapCanvas.scaleChanged.disconnect(self.zoomToScale)
+            targetScale = min(scales, key=lambda x: abs(x - scale))
+            self.mapCanvas.zoomScale(targetScale)
+            self.mapCanvas.scaleChanged.connect(self.zoomToScale)
+
+        '''def forcedScale(self, scales):
 
             predefinedScales = [
                 591657528,
@@ -176,7 +207,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
             ]
 
             self.mapCanvas.scaleChanged.connect(self.zoomToScale)
-            scales = predefinedScales
+            scales = predefinedScales'''
     except Exception as e:
         print e
 
@@ -200,17 +231,6 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         renderer = QgsCategorizedSymbolRendererV2('ID', categories)
         self.loblayer.setRendererV2(renderer)
 
-        # symbol1 = QgsSymbolV2.defaultSymbol(self.countries_layer.geometryType())
-        # symbol1.deleteSymbolLayer(0)
-
-        # countrsym = QgsSimpleFillSymbolLayerV2()
-        # countrsym.setBorderWidth(.01)
-        # countrsym.setOutputUnit(QgsSymbolV2.Pixel)
-        # countrsym.setFillColor(QColor(0, 0, 0, 0))
-        # symbol1.appendSymbolLayer(countrsym)
-
-        # renderer = QgsSingleSymbolRendererV2(symbol1)
-        # self.countries_layer.setRendererV2(renderer)
 
         symbol = QgsMarkerSymbolV2.createSimple({})
         symbol.deleteSymbolLayer(0)
@@ -220,7 +240,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         # symbol_layer = QgsSimpleMarkerSymbolLayerV2()
         # symbol_layer.setSize(5)
         symbol_layer.setPath(os.path.join(cur_dir, "data", "thiefarrow.svg"))
-        symbol_layer.setDataDefinedProperty("angle", "Y")
+        symbol_layer.setDataDefinedProperty("angle", "AZIMUTH")
         symbol.appendSymbolLayer(symbol_layer)
 
         renderer = QgsSingleSymbolRendererV2(symbol)
@@ -286,7 +306,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
 
         for j, k in enumerate(x):
             w.point(k, y[j])
-            w.record(k, y[j], az[j], idd[j])
+            w.record(idd[j],az[j],y[j], k ) #was reversed
 
         w.save(out_file)
 
@@ -352,24 +372,30 @@ class PanTool(QgsMapTool):
 
 
 def main():
-
+    print "main"
     QgsApplication.setPrefixPath(os.environ['QGIS_PREFIX'], True)
     QgsApplication.initQgis()
 
+
     app = QApplication(sys.argv)
+
 
     window = MapExplorer()
     window.show()
     window.raise_()
     window.loadMap()
+    try:
+        window.zoomToScale()
+    except Exception as f:
+        print f
     window.setSymbology()
     window.setPanMode()
 
     app.exec_()
     app.deleteLater()
-    #QgsApplication.exitQgis()
+    QgsApplication.exitQgis()
 
 
 if __name__ == "__main__":
-
+    print "if name main"
     main()
