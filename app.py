@@ -73,8 +73,6 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.root = QgsProject.instance().layerTreeRoot()
         self.bridge = QgsLayerTreeMapCanvasBridge(self.root, self.mapCanvas)
         self.model = QgsLayerTreeModel(self.root)
-        self.model.setFlag(QgsLayerTreeModel.AllowNodeReorder)
-        self.model.setFlag(QgsLayerTreeModel.AllowNodeRename)
         self.model.setFlag(QgsLayerTreeModel.AllowNodeChangeVisibility)
         self.model.setFlag(QgsLayerTreeModel.ShowLegend)
         self.view = QgsLayerTreeView()
@@ -212,8 +210,6 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         cur_dir = os.path.dirname(os.path.realpath(__file__))
 
         symbol_layer = QgsSvgMarkerSymbolLayerV2()
-        # symbol_layer = QgsSimpleMarkerSymbolLayerV2()
-        # symbol_layer.setSize(5)
         symbol_layer.setPath(os.path.join(cur_dir, "data", "thiefarrow.svg"))
         symbol_layer.setDataDefinedProperty("angle", "AZIMUTH")
         symbol.appendSymbolLayer(symbol_layer)
@@ -301,7 +297,6 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         w.field('X', 'F', 10, 8)
 
         for j, k in enumerate(x):
-            #if j > 0:
             w.point(k, y[j])
             w.record(idd[j],az[j],y[j], k )
             print "recorded"
