@@ -21,6 +21,9 @@ import resources_rc
 
 # SETUP GUI
 class MapExplorer(QMainWindow, Ui_ExplorerWindow):
+    lastX = 0.
+    lastY = 0.
+
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
@@ -46,7 +49,8 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
                      SIGNAL("triggered()"), self.setExploreMode)
 
         self.mapCanvas = QgsMapCanvas()
-        self.mapCanvas.useImageToRender(False)
+        self.mapCanvas.useImageToRender(True)
+        self.mapCanvas.enableAntiAliasing(True)
         self.mapCanvas.setCanvasColor(Qt.white)
         self.mapCanvas.setCrsTransformEnabled(True)
         self.mapCanvas.setDestinationCrs(QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.EpsgCrsId))
@@ -89,9 +93,38 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
 
         self.watcher = QFileSystemWatcher()
         self.watcher.addPath(os.path.join(cur_dir, "data", "test.csv"))
-        self.watcher.addPath(os.path.join(cur_dir, "data", "thiefsymbolcsv.csv"))
+        #self.watcher.addPath(os.path.join(cur_dir, "data", "thiefsymbolcsvshp.shp"))
         self.watcher.fileChanged.connect(self.csvLobRefresh)
         self.watcher.fileChanged.connect(self.csvThiefRefresh)
+
+        self.predefinedScales = [
+                591657528,
+                295828764,
+                147914382,
+                73957191,
+                36978595,
+                18489298,
+                9244649,
+                4622324,
+                2311162,
+                1155581,
+                577791,
+                288895,
+                144448,
+                72224,
+                36112,
+                18056,
+                9028,
+                4514,
+                2257,
+                1128,
+                564,
+                282,
+                141,
+                71
+            ]
+
+        self.mapCanvas.scaleChanged.connect(self.zoomToScale)
 
     # LOAD MAP LAYERS TO GUI
     def loadMap(self):
@@ -143,71 +176,13 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
             #print r
 
     try:
-        def zoomToScale(self, scale):
-
-            scales = [
-                591657528,
-                295828764,
-                147914382,
-                73957191,
-                36978595,
-                18489298,
-                9244649,
-                4622324,
-                2311162,
-                1155581,
-                577791,
-                288895,
-                144448,
-                72224,
-                36112,
-                18056,
-                9028,
-                4514,
-                2257,
-                1128,
-                564,
-                282,
-                141,
-                71
-            ]
-
+        def zoomToScale(self):
             self.mapCanvas.scaleChanged.disconnect(self.zoomToScale)
-            targetScale = min(scales, key=lambda x: abs(x - scale))
+            scale = self.mapCanvas.scale()
+            targetScale = min(self.predefinedScales, key=lambda x: abs(x - scale))
             self.mapCanvas.zoomScale(targetScale)
             self.mapCanvas.scaleChanged.connect(self.zoomToScale)
 
-        '''def forcedScale(self, scales):
-
-            predefinedScales = [
-                591657528,
-                295828764,
-                147914382,
-                73957191,
-                36978595,
-                18489298,
-                9244649,
-                4622324,
-                2311162,
-                1155581,
-                577791,
-                288895,
-                144448,
-                72224,
-                36112,
-                18056,
-                9028,
-                4514,
-                2257,
-                1128,
-                564,
-                282,
-                141,
-                71
-            ]
-
-            self.mapCanvas.scaleChanged.connect(self.zoomToScale)
-            scales = predefinedScales'''
     except Exception as e:
         print e
 
@@ -277,6 +252,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
                 w.line(parts=[[[x, y], [x2, y2]]])
                 w.record(ID=no, LOB=angle)
 
+
         w.save(os.path.join(cur_dir, "data", "line_points.shp"))
 
         self.loblayer.setCacheImage(None)
@@ -284,19 +260,39 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
 
     # CSV TO THIEF
     def csvThiefRefresh(self):
+        print "thiefrefresh"
         cur_dir = os.path.dirname(os.path.realpath(__file__))
 
-        file_location = os.path.join(cur_dir, "data", "thiefsymbolcsv.csv")
+
+        file_location = os.path.join(cur_dir, "data", "test.csv")
         out_file = os.path.join(cur_dir, "data", "thiefsymbolcsvshp.shp")
         idd, az, y, x = [], [], [], []
+
         with open(file_location, 'rb') as csvfile:
-            r = csv.reader(csvfile, delimiter=',')
-            for i, row in enumerate(r):
-                if i > 0:
-                    idd.append(row[0])
-                    az.append(float(row[1]))
-                    y.append(float(row[2]))
-                    x.append(float(row[3]))
+            r = list(csv.reader(csvfile, delimiter=','))
+            reader = r[len(r) - 1:] #read only top row
+
+            for i, row in reversed(list(enumerate(reader))): #reverse table
+                idd.append(str(row[0]))
+                az.append(float(row[2]))
+                try:
+                    y.append(float(row[6]))
+                    MapExplorer.lastY = float(row[6])
+                    print "y field filled"
+                except (TypeError, ValueError) as e:
+                        y.append(MapExplorer.lastY)
+                        print "y field empty"
+
+                try:
+                    x.append(float(row[7]))
+                    MapExplorer.lastX = float(row[7])
+                    print "x field filled"
+                except (TypeError, ValueError) as e:
+                        x.append(MapExplorer.lastX)
+                        print "x field empty"
+
+                print "appended"
+
 
         w = shapefile.Writer(shapefile.POINT)
         w.field('ID', 'N')
@@ -305,13 +301,16 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         w.field('X', 'F', 10, 8)
 
         for j, k in enumerate(x):
+            #if j > 0:
             w.point(k, y[j])
-            w.record(idd[j],az[j],y[j], k ) #was reversed
+            w.record(idd[j],az[j],y[j], k )
+            print "recorded"
 
         w.save(out_file)
 
         self.thieflayer.setCacheImage(None)
         self.thieflayer.triggerRepaint()
+
 
     def showVisibleMapLayers(self):
         layers = []
