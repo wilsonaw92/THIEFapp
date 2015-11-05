@@ -37,6 +37,10 @@ class Ui_ExplorerWindow(object):
         self.actionShowLobLayer.setShortcut("Ctrl+L")
         self.actionShowLobLayer.setCheckable(True)
 
+        '''self.actionShowCSV = QtGui.QAction("View All Data", window)
+        self.actionShowCSV = setShortcut("Ctrl+D")
+        self.actionShowCSV''' #in progress. option to open thief CSV
+
         icon = QtGui.QIcon(":/icons/mActionZoomIn.png")
         self.actionZoomIn = QtGui.QAction(icon, "Zoom In", window)
         self.actionZoomIn.setShortcut(QtGui.QKeySequence.ZoomIn)
@@ -55,11 +59,13 @@ class Ui_ExplorerWindow(object):
         self.actionExplore.setShortcut("Ctrl+2")
 
         self.fileMenu.addAction(self.actionQuit)
+        #self.fileMenu.addAction(self.actionShowCSV)
 
         self.viewMenu.addAction(self.actionShowBasemapLayer)
         self.viewMenu.addAction(self.actionShowCountriesLayer)
         self.viewMenu.addAction(self.actionShowThiefLayer)
         self.viewMenu.addAction(self.actionShowLobLayer)
+
         self.viewMenu.addSeparator()
         self.viewMenu.addAction(self.actionZoomIn)
         self.viewMenu.addAction(self.actionZoomOut)
