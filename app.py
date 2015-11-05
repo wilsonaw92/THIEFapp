@@ -1,5 +1,5 @@
 # pydebug below
-#import pdb
+# import pdb
 import os, os.path, sys
 import math
 import csv
@@ -17,10 +17,12 @@ import resources_rc
 
 
 # pydebug
-#pdb.set_trace()
+# pdb.set_trace()
 
 # SETUP GUI
 class MapExplorer(QMainWindow, Ui_ExplorerWindow):
+
+    # CACHE VARIABLES FOR csvThiefRefresh FUNCTION
     lastX = 0.
     lastY = 0.
 
@@ -48,6 +50,8 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.connect(self.actionExplore,
                      SIGNAL("triggered()"), self.setExploreMode)
 
+
+        # SET MAP CANVAS PARAMETERS
         self.mapCanvas = QgsMapCanvas()
         self.mapCanvas.useImageToRender(True)
         self.mapCanvas.enableAntiAliasing(True)
@@ -69,7 +73,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.panTool = PanTool(self.mapCanvas)
         self.panTool.setAction(self.actionPan)
 
-
+        # CREATE LEGEND
         self.root = QgsProject.instance().layerTreeRoot()
         self.bridge = QgsLayerTreeMapCanvasBridge(self.root, self.mapCanvas)
         self.model = QgsLayerTreeModel(self.root)
@@ -83,18 +87,19 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.LegendDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.LegendDock.setWidget(self.view)
         self.LegendDock.setContentsMargins(9, 9, 9, 9)
-        # self.LegendDock.addStretch()
         self.LegendDock.setMinimumWidth(200)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.LegendDock)
 
-        cur_dir = os.path.dirname(os.path.realpath(__file__))
+        cur_dir = os.path.dirname(os.path.realpath(__file__)) #SET RELATIVE PATHS
 
+
+        # WATCH FOR CHANGES IN RELEVANT FILES
         self.watcher = QFileSystemWatcher()
         self.watcher.addPath(os.path.join(cur_dir, "data", "test.csv"))
-        #self.watcher.addPath(os.path.join(cur_dir, "data", "thiefsymbolcsvshp.shp"))
         self.watcher.fileChanged.connect(self.csvLobRefresh)
         self.watcher.fileChanged.connect(self.csvThiefRefresh)
 
+        # OPENSTREETMAP SCALES FOR zoomToScale FUNCTION
         self.predefinedScales = [
                 591657528,
                 295828764,
@@ -154,6 +159,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.mapCanvas.setLayerSet(layers)
         self.mapCanvas.setExtent(self.loblayer.extent())
 
+        # SET LABEL RULES
         self.thieflayer.setCustomProperty("labeling", "pal")
         self.thieflayer.setCustomProperty("labeling/isExpression", True)
         self.thieflayer.setCustomProperty("labeling/enabled", True)
@@ -168,21 +174,16 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
                                           "'Az: '  || AZIMUTH || '\n' || 'X: ' ||  X ||  '\n'  || 'Y: '  ||   Y")
         self.thieflayer.setCustomProperty("labeling/placement", "3")
         self.thieflayer.setCustomProperty("labeling/dist", "5")
-        #try:
-            #self.zoomToScale(None)
-        #except Exception as r:
-            #print r
 
-    try:
-        def zoomToScale(self):
-            self.mapCanvas.scaleChanged.disconnect(self.zoomToScale)
-            scale = self.mapCanvas.scale()
-            targetScale = min(self.predefinedScales, key=lambda x: abs(x - scale))
-            self.mapCanvas.zoomScale(targetScale)
-            self.mapCanvas.scaleChanged.connect(self.zoomToScale)
+    # SET ZOOM LEVELS TO OPENSTREETMAP SCALES
+    def zoomToScale(self):
+        self.mapCanvas.scaleChanged.disconnect(self.zoomToScale)
+        scale = self.mapCanvas.scale()
+        targetScale = min(self.predefinedScales, key=lambda x: abs(x - scale))
+        self.mapCanvas.zoomScale(targetScale)
+        self.mapCanvas.scaleChanged.connect(self.zoomToScale)
 
-    except Exception as e:
-        print e
+
 
     # DEFINE POINT/LINE SYMBOLOGY
     def setSymbology(self):
@@ -217,7 +218,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         renderer = QgsSingleSymbolRendererV2(symbol)
         self.thieflayer.setRendererV2(renderer)
 
-    # CSV TO LOB
+    # DIGITIZE LAST TEN LOBS FROM CSV
     def csvLobRefresh(self):
         print "lobrefresh"
         cur_dir = os.path.dirname(os.path.realpath(__file__))
@@ -252,9 +253,9 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         w.save(os.path.join(cur_dir, "data", "line_points.shp"))
 
         self.loblayer.setCacheImage(None)
-        self.loblayer.triggerRepaint()
+        self.loblayer.triggerRepaint() # repaint layer upon completion
 
-    # CSV TO THIEF
+    # DIGITIZE THIEF SYMBOL FROM CSV
     def csvThiefRefresh(self):
         print "thiefrefresh"
         cur_dir = os.path.dirname(os.path.realpath(__file__))
@@ -271,7 +272,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
             for i, row in reversed(list(enumerate(reader))): #reverse table
                 idd.append(str(row[0]))
                 az.append(float(row[2]))
-                try:
+                try: # cache last Y value if field empty
                     y.append(float(row[6]))
                     MapExplorer.lastY = float(row[6])
                     print "y field filled"
@@ -279,7 +280,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
                         y.append(MapExplorer.lastY)
                         print "y field empty"
 
-                try:
+                try: # cache last X value if field empty
                     x.append(float(row[7]))
                     MapExplorer.lastX = float(row[7])
                     print "x field filled"
@@ -296,7 +297,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         w.field('Y', 'F', 10, 8)
         w.field('X', 'F', 10, 8)
 
-        for j, k in enumerate(x):
+        for j, k in enumerate(x): # write data to shapefile
             w.point(k, y[j])
             w.record(idd[j],az[j],y[j], k )
             print "recorded"
@@ -304,9 +305,10 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         w.save(out_file)
 
         self.thieflayer.setCacheImage(None)
-        self.thieflayer.triggerRepaint()
+        self.thieflayer.triggerRepaint() # repaint layer upon completion
 
 
+    # SHOW LAYERS WHEN CHECKED
     def showVisibleMapLayers(self):
         layers = []
         if self.actionShowCountriesLayer.isChecked():
@@ -342,12 +344,16 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.actionPan.setChecked(True)
         self.mapCanvas.setMapTool(self.panTool)
 
+    # ZOOM TO THIEF (YELLOW BUTTON)
     def setExploreMode(self):
         self.mapCanvas.setExtent(self.loblayer.extent())
         self.mapCanvas.setExtent(self.thieflayer.extent())
         self.basemap_layer.triggerRepaint()
 
+    '''def setOpenCSV(self):
+        self.actionShowCSV.''' #in progress. option to open thief CSV
 
+# CLICK AND DRAG PAN
 class PanTool(QgsMapTool):
     def __init__(self, mapCanvas):
         QgsMapTool.__init__(self, mapCanvas)
